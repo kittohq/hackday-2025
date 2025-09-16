@@ -826,7 +826,15 @@ def process_voice():
 
         # For display, create a simpler formatted response without markdown
         if places:
-            response = f"I found {len(places)} options near {current_destination['name']}:\n\n"
+            # Show accurate count - only showing top 3
+            total_count = len(places)
+            showing_count = min(3, total_count)
+
+            if total_count > 3:
+                response = f"I found {total_count} options near {current_destination['name']}. Here are the top {showing_count}:\n\n"
+            else:
+                response = f"I found {total_count} options near {current_destination['name']}:\n\n"
+
             for i, place in enumerate(places[:3], 1):
                 response += f"{i}. {place['name']} - {place['distance_text']}\n"
                 response += f"   ⭐ {place['rating']} stars ({place['review_count']} reviews)\n"
@@ -872,7 +880,15 @@ def search():
 
         # For display, create a simpler formatted response
         if places:
-            response = f"Found {len(places)} options near {current_destination['name']}:\n\n"
+            # Show accurate count - only showing top 3
+            total_count = len(places)
+            showing_count = min(3, total_count)
+
+            if total_count > 3:
+                response = f"Found {total_count} options near {current_destination['name']}. Here are the top {showing_count}:\n\n"
+            else:
+                response = f"Found {total_count} options near {current_destination['name']}:\n\n"
+
             for i, place in enumerate(places[:3], 1):
                 response += f"{i}. {place['name']} ({place['distance_text']})\n"
                 response += f"   ⭐ {place['rating']} stars\n\n"
