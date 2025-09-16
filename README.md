@@ -2,6 +2,24 @@
 
 A voice-enabled AI assistant for Waymo riders that provides natural conversational interactions to find places near your destination using real-time Google Places data and Web Speech APIs.
 
+## 🔧 Technologies & APIs Used
+
+### Core AI & Processing
+- **AWS Strands SDK** - Agent orchestration framework for tool-based AI
+- **OpenAI API (GPT-3.5/4)** - Natural language understanding and intent classification
+- **Google Places API** - Real-time business data for 5M+ locations worldwide
+
+### Voice Technologies
+- **Web Speech API** - Browser-native speech recognition (STT) - no API keys needed!
+- **Web Speech Synthesis** - Browser-native text-to-speech (TTS) for natural responses
+- **Gladia API** (Optional) - Advanced voice transcription for production deployments
+
+### Additional Services
+- **Google Maps Distance Matrix API** - Accurate walking/driving time calculations
+- **Yelp Fusion API** (Legacy) - Alternative business data source
+- **Redis** - Caching and preference learning
+- **FastAPI/WebSocket** - Real-time bidirectional communication
+
 ## 🆕 Voice-Enabled Web Interface
 
 The latest version (`app_voice.py`) provides a full voice conversational interface:
