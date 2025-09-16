@@ -476,7 +476,10 @@ HTML_TEMPLATE = '''
             };
 
             recognition.onend = () => {
+                console.log('Recognition ended');
                 stopRecording();
+                // Reset recognition for next use
+                isRecording = false;
             };
         }
 
@@ -546,10 +549,12 @@ HTML_TEMPLATE = '''
 
         // Send transcript to server
         async function sendTranscriptToServer(transcript) {
+            console.log('Sending transcript to server:', transcript);
             addMessage(transcript, 'user');
             updateStatus('processing', '⏳', 'Searching...');
 
             try {
+                console.log('Making API request...');
                 const response = await fetch('/api/voice', {
                     method: 'POST',
                     headers: {
@@ -558,7 +563,9 @@ HTML_TEMPLATE = '''
                     body: JSON.stringify({ transcript: transcript })
                 });
 
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (data.response) {
                     addMessage(data.response, 'assistant');
