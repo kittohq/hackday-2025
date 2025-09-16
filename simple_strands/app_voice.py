@@ -644,8 +644,8 @@ HTML_TEMPLATE = '''
             bubbleDiv.className = 'message-bubble';
 
             // Format text with line breaks and proper display
-            if (sender === 'assistant' && text.includes('\n')) {
-                bubbleDiv.innerHTML = text.replace(/\n/g, '<br>');
+            if (sender === 'assistant' && text.includes('\\n')) {
+                bubbleDiv.innerHTML = text.replace(/\\n/g, '<br>');
             } else {
                 bubbleDiv.textContent = text;
             }
