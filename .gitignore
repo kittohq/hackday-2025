@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Environment variables
+.env
+*.env
+.env.example
+simple_strands/.env.example
+set_api_keys.sh
+api_keys_backup.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing
+.coverage
+.pytest_cache/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Node (for frontend)
+node_modules/
+npm-debug.log*

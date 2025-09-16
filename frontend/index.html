@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Rider Experience Agent - Simulator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .voice-button {
+            transition: all 0.3s ease;
+        }
+
+        .voice-button.recording {
+            background-color: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .emotion-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .emotion-anxious { background-color: #fbbf24; }
+        .emotion-happy { background-color: #10b981; }
+        .emotion-neutral { background-color: #6b7280; }
+        .emotion-frustrated { background-color: #ef4444; }
+
+        #map { height: 300px; }
+
+        .suggestion-pill {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 max-w-6xl">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-4">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Dynamic Rider Experience Agent</h1>
+            <p class="text-gray-600">Autonomous Vehicle Assistant - Hackathon Demo</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-4">
+                    <h2 class="text-xl font-semibold mb-4">Vehicle Status</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Destination</p>
+                            <p class="font-semibold" id="destination">San Francisco Airport</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">ETA</p>
+                            <p class="font-semibold" id="eta">25 minutes</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Current Speed</p>
+                            <p class="font-semibold" id="speed">45 mph</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Temperature</p>
+                            <p class="font-semibold" id="temperature">72°F</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Conversation</h2>
+
+                    <div class="chat-container bg-gray-50 rounded-lg p-4 mb-4" id="chatContainer">
+                        <div class="text-center text-gray-500 py-8">
+                            Start a conversation by speaking or typing...
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="messageInput"
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Type a message or use voice..."
+                            onkeypress="handleKeyPress(event)"
+                        />
+                        <button
+                            id="voiceButton"
+                            class="voice-button px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onclick="toggleVoiceRecording()"
+                        >
+                            🎤 Voice
+                        </button>
+                        <button
+                            class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                            onclick="sendMessage()"
+                        >
+                            Send
+                        </button>
+                    </div>
+
+                    <div id="suggestions" class="mt-4 flex flex-wrap gap-2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-4">
+                    <h2 class="text-xl font-semibold mb-4">Map View</h2>
+                    <div id="map" class="rounded-lg"></div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-4">
+                    <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+                    <div class="space-y-2">
+                        <button onclick="sendQuickAction('Find coffee shop nearby')" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-left">
+                            ☕ Find Coffee Shop
+                        </button>
+                        <button onclick="sendQuickAction('How much longer until we arrive?')" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-left">
+                            ⏰ Check ETA
+                        </button>
+                        <button onclick="sendQuickAction('Can you take a different route?')" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-left">
+                            🛣️ Change Route
+                        </button>
+                        <button onclick="sendQuickAction('Tell me about this area')" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-left">
+                            📍 Local Info
+                        </button>
+                        <button onclick="sendQuickAction('I am feeling anxious')" class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-left">
+                            😰 Comfort Mode
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Demo Scenarios</h2>
+                    <select onchange="triggerScenario(this.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Select a scenario...</option>
+                        <option value="traffic">Heavy Traffic Detected</option>
+                        <option value="hungry">Rider is Hungry</option>
+                        <option value="anxious">Anxious Rider</option>
+                        <option value="tourist">Tourist Mode</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let ws = null;
+        let isRecording = false;
+        let map = null;
+        let marker = null;
+        const sessionId = Math.random().toString(36).substring(7);
+
+        function initWebSocket() {
+            ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
+
+            ws.onopen = () => {
+                console.log('Connected to agent');
+                addSystemMessage('Connected to Dynamic Rider Experience Agent');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleAgentResponse(data);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addSystemMessage('Connection error. Please refresh the page.');
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected from agent');
+                addSystemMessage('Disconnected. Attempting to reconnect...');
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        function initMap() {
+            map = L.map('map').setView([37.7749, -122.4194], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            marker = L.marker([37.7749, -122.4194]).addTo(map)
+                .bindPopup('Your current location')
+                .openPopup();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            addUserMessage(message);
+
+            ws.send(JSON.stringify({
+                type: 'text',
+                data: message,
+                context: {
+                    location: { lat: 37.7749, lng: -122.4194 },
+                    destination: { lat: 37.6213, lng: -122.3790 },
+                    eta_minutes: 25,
+                    traffic_condition: 'normal'
+                }
+            }));
+
+            input.value = '';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function toggleVoiceRecording() {
+            const button = document.getElementById('voiceButton');
+
+            if (!isRecording) {
+                button.classList.add('recording');
+                button.textContent = '⏹️ Stop';
+                isRecording = true;
+                startRecording();
+            } else {
+                button.classList.remove('recording');
+                button.textContent = '🎤 Voice';
+                isRecording = false;
+                stopRecording();
+            }
+        }
+
+        function startRecording() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        window.audioStream = stream;
+                        addSystemMessage('Recording... Speak now');
+                    })
+                    .catch(err => {
+                        console.error('Error accessing microphone:', err);
+                        addSystemMessage('Microphone access denied. Using text input.');
+                        isRecording = false;
+                        document.getElementById('voiceButton').classList.remove('recording');
+                    });
+            } else {
+                addSystemMessage('Voice recording not supported. Please type your message.');
+            }
+        }
+
+        function stopRecording() {
+            if (window.audioStream) {
+                window.audioStream.getTracks().forEach(track => track.stop());
+                simulateVoiceInput();
+            }
+        }
+
+        function simulateVoiceInput() {
+            const mockPhrases = [
+                "Can we stop for coffee?",
+                "I'm feeling a bit anxious about the speed",
+                "What restaurants are nearby?",
+                "How's the traffic ahead?",
+                "Can you recommend a good Thai place?"
+            ];
+
+            const phrase = mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
+            document.getElementById('messageInput').value = phrase;
+            sendMessage();
+        }
+
+        function handleAgentResponse(data) {
+            if (data.type === 'response') {
+                addAgentMessage(
+                    data.response.message || data.response,
+                    data.emotion_detected,
+                    data.suggestions
+                );
+
+                if (data.actions && data.actions.length > 0) {
+                    handleActions(data.actions);
+                }
+            } else if (data.type === 'connection') {
+                console.log('Connection established:', data.message);
+            }
+        }
+
+        function handleActions(actions) {
+            actions.forEach(action => {
+                switch(action.type) {
+                    case 'ADJUST_TEMPERATURE':
+                        document.getElementById('temperature').textContent = `${action.details.target_temp}°F`;
+                        addSystemMessage(`Temperature adjusted to ${action.details.target_temp}°F`);
+                        break;
+                    case 'UPDATE_ROUTE':
+                        addSystemMessage('Route updated to avoid traffic');
+                        break;
+                    case 'CHANGE_MUSIC':
+                        addSystemMessage(`Now playing ${action.details.genre} music`);
+                        break;
+                }
+            });
+        }
+
+        function addUserMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'mb-4 text-right';
+            messageDiv.innerHTML = `
+                <div class="inline-block max-w-xs px-4 py-2 bg-blue-500 text-white rounded-lg">
+                    ${message}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">You</div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addAgentMessage(message, emotion, suggestions) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'mb-4';
+
+            const emotionClass = emotion ? `emotion-${emotion.state}` : 'emotion-neutral';
+
+            messageDiv.innerHTML = `
+                <div class="inline-block max-w-xs px-4 py-2 bg-gray-200 rounded-lg">
+                    <span class="emotion-indicator ${emotionClass}"></span>
+                    ${message}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">Agent ${emotion ? `(${emotion.state})` : ''}</div>
+            `;
+
+            chatContainer.appendChild(messageDiv);
+
+            if (suggestions && suggestions.length > 0) {
+                displaySuggestions(suggestions);
+            }
+
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'mb-2 text-center';
+            messageDiv.innerHTML = `
+                <div class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                    ${message}
+                </div>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function displaySuggestions(suggestions) {
+            const suggestionsDiv = document.getElementById('suggestions');
+            suggestionsDiv.innerHTML = '';
+
+            suggestions.forEach(suggestion => {
+                const pill = document.createElement('button');
+                pill.className = 'suggestion-pill px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200';
+                pill.textContent = suggestion;
+                pill.onclick = () => {
+                    document.getElementById('messageInput').value = `Tell me more about ${suggestion}`;
+                    sendMessage();
+                };
+                suggestionsDiv.appendChild(pill);
+            });
+        }
+
+        function sendQuickAction(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+
+        function triggerScenario(scenario) {
+            if (!scenario) return;
+
+            const scenarios = {
+                traffic: {
+                    message: "Heavy traffic detected ahead",
+                    context: { traffic_condition: 'heavy', eta_minutes: 35 }
+                },
+                hungry: {
+                    message: "I'm getting hungry. What food options are nearby?",
+                    context: {}
+                },
+                anxious: {
+                    message: "I'm feeling nervous about the autonomous driving",
+                    context: {}
+                },
+                tourist: {
+                    message: "This is my first time in San Francisco. Tell me about interesting places nearby",
+                    context: {}
+                }
+            };
+
+            const scenarioData = scenarios[scenario];
+            if (scenarioData) {
+                if (scenario === 'traffic') {
+                    addSystemMessage(scenarioData.message);
+                    document.getElementById('eta').textContent = '35 minutes (+10)';
+                } else {
+                    document.getElementById('messageInput').value = scenarioData.message;
+                    sendMessage();
+                }
+            }
+        }
+
+        window.onload = () => {
+            initWebSocket();
+            initMap();
+        };
+    </script>
+</body>
+</html>
