@@ -1,17 +1,24 @@
-# Dynamic Rider Experience Agent 🚗🤖
+# Waymo Rider Voice Assistant 🚗🎤
 
-A conversational AI agent for autonomous vehicles that enhances the rider experience through natural voice interactions, emotion detection, and context-aware recommendations.
+A voice-enabled AI assistant for Waymo riders that provides natural conversational interactions to find places near your destination using real-time Google Places data and Web Speech APIs.
 
-## 🆕 Version 2: AI-Powered Intent Understanding
+## 🆕 Voice-Enabled Web Interface
 
-The latest version (`waymo_rider_agent_v2.py`) uses AWS Strands SDK with OpenAI GPT-3.5 to intelligently understand natural language requests:
+The latest version (`app_voice.py`) provides a full voice conversational interface:
 
-### V2 Features
+### Voice Features
+- **Web Speech API**: Browser-native speech recognition (STT)
+- **Natural Language Generation**: Conversational TTS responses
+- **Dual Input Modes**: Voice or text input for flexibility
+- **Real-time Transcription**: See what you're saying as you speak
+- **Auto Speech Synthesis**: Responses are automatically spoken aloud
+
+### Core V2 Features
 - **Natural Language Understanding**: Say "I'm starving" instead of "restaurant"
 - **Context-Aware Mapping**: "Need fuel" → coffee in morning, gas station at night
-- **30+ Place Categories**: From coffee shops to tourist attractions
+- **30+ Google Place Categories**: From coffee shops to tourist attractions
 - **Strands Agent Philosophy**: Dedicated intent-mapping agent for accurate categorization
-- **Real Google Places Data**: Live business info, ratings, and reviews
+- **Real Google Places Data**: Live business info, ratings, reviews, and open/closed status
 
 ### Example Intent Mappings
 ```
@@ -22,35 +29,43 @@ The latest version (`waymo_rider_agent_v2.py`) uses AWS Strands SDK with OpenAI 
 "Need to pick up my prescription" → pharmacy
 ```
 
-Test it: `python3 simple_strands/waymo_rider_agent_v2.py test`
+### Quick Start Voice Assistant:
+```bash
+# Run the voice-enabled web app
+python3 simple_strands/app_voice.py
+# Open http://localhost:5004 in Chrome/Edge
+```
+
+Test backend: `python3 simple_strands/waymo_rider_agent_v2.py test`
 
 ## 🎯 Key Features
 
+### Voice Interface
+- **Speech-to-Text**: Browser-native Web Speech API (no API keys needed)
+- **Text-to-Speech**: Natural voice responses with Web Speech Synthesis
+- **Visual Feedback**: Real-time transcription and voice status indicators
+- **Fallback Options**: Text input for noisy environments
+
 ### Core Capabilities
-- **Voice-to-Text**: Natural language input via Gladia API
-- **Emotion Detection**: Real-time emotional state analysis via Minimax
-- **Intent Classification**: Understanding rider requests and needs
-- **Context-Aware Recommendations**: Yelp integration for local business suggestions
-- **Personalization**: Redis caching for user preferences and patterns
-- **Text-to-Speech**: Natural voice responses for conversational flow
+- **Intent Classification**: AI understands natural language requests
+- **Google Places Integration**: Real-time data on 5M+ businesses
+- **Distance Calculations**: Accurate walking times from destination
+- **Context-Aware**: Shows open/closed status, ratings, and reviews
+- **Multi-Modal**: Voice, text, and visual responses
 
-### Why This Beats Manual Yelp Searches
+### Why Voice Assistant > Manual Search
 
-1. **Context-Aware Routing**: Knows your exact route and suggests places with minimal detour
-2. **Real-Time Traffic Integration**: Factors in current traffic when calculating detours
-3. **Safety First**: No phone handling while in motion
-4. **Emotional Intelligence**: Adapts responses based on rider's emotional state
-5. **Proactive Suggestions**: "Traffic ahead will delay us 15 minutes. There's a coffee shop 1 minute away if you'd like to wait it out"
-6. **Seamless Execution**: Direct route updates without app switching
+1. **Hands-Free**: Just speak naturally - no typing or tapping
+2. **Destination-Aware**: Automatically searches near your Waymo dropoff point
+3. **Real Google Data**: Live info on 5M+ places with current open/closed status
+4. **Natural Conversation**: Say "I need coffee" not "coffee shops near me"
+5. **Safety First**: No phone handling while in motion
+6. **Instant Results**: Voice response with top 3 options in seconds
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 ```bash
-# Install Redis (Mac)
-brew install redis
-brew services start redis
-
 # Install Python dependencies
 pip install -r requirements.txt
 ```
@@ -61,24 +76,28 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Add your API keys to .env:
-# - GLADIA_API_KEY (for voice transcription)
-# - MINIMAX_API_KEY (for emotion detection)
-# - OPENAI_API_KEY (for conversation engine)
-# - YELP_API_KEY (optional, for real Yelp data)
+# - OPENAI_API_KEY (for intent classification)
+# - GOOGLE_API_KEY (for Google Places API)
 ```
 
 ### Running the Application
 
-#### Option 1: Waymo Agent with Google Places (Recommended)
+#### Option 1: Voice-Enabled Web App (Recommended)
 ```bash
-# Version 2 with AI intent understanding
-python3 simple_strands/waymo_rider_agent_v2.py
+# Start the voice assistant
+python3 simple_strands/app_voice.py
 
-# Or Version 1 with keyword matching
-python3 simple_strands/run_agent.py
+# Open in Chrome or Edge browser
+http://localhost:5004
 ```
 
-#### Option 2: Original FastAPI Backend
+#### Option 2: Command Line Testing
+```bash
+# Test intent mapping and places search
+python3 simple_strands/waymo_rider_agent_v2.py test
+```
+
+#### Option 3: Original FastAPI Backend
 ```bash
 # Start the backend
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -90,31 +109,32 @@ open frontend/index.html
 
 ## 🎮 Demo Scenarios
 
-### 1. Anxious Rider
-**User**: "I'm feeling nervous about the speed"
-**Agent**: Detects anxiety, adjusts driving style, offers calming music
+### 1. Coffee Run
+**Say**: "I need coffee" or "Where can I get caffeine?"
+**Response**: Lists nearest coffee shops with ratings and walking distance
 
 ### 2. Hungry Traveler
-**User**: "I'm hungry, any good Thai food nearby?"
-**Agent**: Finds Thai restaurants along route with minimal detour
+**Say**: "I'm starving" or "Any good Thai food nearby?"
+**Response**: Finds restaurants near destination, shows open/closed status
 
-### 3. Time-Conscious
-**User**: "I'm running late!"
-**Agent**: Finds faster route, provides accurate ETA updates
+### 3. Quick Errands
+**Say**: "I need to pick up medicine" or "Where's the nearest pharmacy?"
+**Response**: Locates pharmacies with hours and distance
 
 ### 4. Tourist Mode
-**User**: "Tell me about this neighborhood"
-**Agent**: Provides local history, attractions, recommendations
+**Say**: "What's fun to do around here?" or "Any museums nearby?"
+**Response**: Suggests attractions and landmarks near destination
 
 ## 📁 Project Structure
 
 ```
-hackday/
-├── simple_strands/              # 🆕 Strands-based implementations
+hackday-2025/
+├── simple_strands/              # 🆕 Voice-enabled implementations
+│   ├── app_voice.py            # Voice web app with STT/TTS
 │   ├── waymo_rider_agent_v2.py # V2: AI intent mapping with Strands
 │   ├── waymo_rider_agent.py    # V1: Keyword-based place search
-│   ├── run_agent.py            # Python runner (auto-loads .env)
-│   ├── test_waymo_agent.py     # Comprehensive test suite
+│   ├── test_voice_features.py  # Voice feature testing
+│   ├── VOICE_INTEGRATION_PROPOSAL.md # Voice architecture docs
 │   └── DEVELOPER_GUIDE.md      # Architecture documentation
 ├── app/                         # Original FastAPI implementation
 │   ├── main.py                 # FastAPI server & WebSocket handling
