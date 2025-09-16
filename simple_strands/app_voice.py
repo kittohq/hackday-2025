@@ -440,13 +440,15 @@ HTML_TEMPLATE = '''
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
 
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+        function createRecognition() {
+            if (!SpeechRecognition) return null;
 
-            recognition.onstart = () => {
+            const rec = new SpeechRecognition();
+            rec.continuous = false;
+            rec.interimResults = true;
+            rec.lang = 'en-US';
+
+            rec.onstart = () => {
                 isRecording = true;
                 updateStatus('recording', '🔴', 'Listening...');
                 document.getElementById('voiceButton').classList.add('recording');
@@ -455,7 +457,7 @@ HTML_TEMPLATE = '''
                 document.getElementById('visualizer').style.display = 'flex';
             };
 
-            recognition.onresult = (event) => {
+            rec.onresult = (event) => {
                 const last = event.results.length - 1;
                 const transcript = event.results[last][0].transcript;
 
@@ -469,18 +471,25 @@ HTML_TEMPLATE = '''
                 }
             };
 
-            recognition.onerror = (event) => {
+            rec.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
                 updateStatus('error', '❌', 'Error: ' + event.error);
                 stopRecording();
             };
 
-            recognition.onend = () => {
+            rec.onend = () => {
                 console.log('Recognition ended');
                 stopRecording();
                 // Reset recognition for next use
                 isRecording = false;
             };
+
+            return rec;
+        }
+
+        // Initialize recognition at startup
+        if (SpeechRecognition) {
+            recognition = createRecognition();
         }
 
         // Start/stop recording
@@ -493,8 +502,15 @@ HTML_TEMPLATE = '''
         }
 
         function startRecording() {
-            if (!recognition) {
+            if (!SpeechRecognition) {
                 alert('Speech recognition not supported in this browser. Try Chrome or Edge.');
+                return;
+            }
+
+            // Create fresh recognition instance for each recording
+            recognition = createRecognition();
+            if (!recognition) {
+                alert('Failed to initialize speech recognition.');
                 return;
             }
 
