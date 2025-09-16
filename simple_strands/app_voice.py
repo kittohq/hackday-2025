@@ -758,7 +758,9 @@ def generate_natural_speech(places, query, destination_name):
 
     # Multiple results - be concise but informative
     closest = places[0]
-    count = len(places)
+    # Only announce the count we're actually showing (max 3)
+    display_count = min(3, len(places))
+    total_count = len(places)
 
     if "coffee" in query.lower():
         place_type = "coffee shops"
@@ -771,16 +773,22 @@ def generate_natural_speech(places, query, destination_name):
     else:
         place_type = "places"
 
+    # Adjust the message based on whether we're showing all or just top results
+    if total_count > 3:
+        count_phrase = f"the top {display_count} of {total_count}"
+    else:
+        count_phrase = str(display_count)
+
     responses = [
-        f"I found {count} {place_type} near {destination_name}. "
+        f"I found {count_phrase} {place_type} near {destination_name}. "
         f"The closest is {closest['name']}, just {closest['distance_text']} away "
         f"with a {closest['rating']} star rating.",
 
-        f"Great news! There are {count} options nearby. "
+        f"Great news! I'm showing you {count_phrase} options nearby. "
         f"{closest['name']} is your closest choice at {closest['distance_text']}, "
         f"and it has {closest['rating']} stars.",
 
-        f"I've located {count} {place_type} for you. "
+        f"I've located {count_phrase} {place_type} for you. "
         f"The nearest one is {closest['name']}, {closest['distance_text']} from your destination, "
         f"rated {closest['rating']} stars."
     ]
