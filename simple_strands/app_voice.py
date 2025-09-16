@@ -76,6 +76,15 @@ HTML_TEMPLATE = '''
             text-align: center;
         }
 
+        .destination-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
         .voice-status {
             margin-top: 20px;
             padding: 15px;
@@ -313,6 +322,9 @@ HTML_TEMPLATE = '''
     <div class="container">
         <div class="header">
             <h1>🚗 Waymo Voice Assistant</h1>
+            <div class="destination-info" id="destinationInfo">
+                📍 Destination: <span id="destinationName">Loading...</span>
+            </div>
             <div class="voice-status">
                 <div class="status-text">
                     <span class="status-icon" id="statusIcon">🎤</span>
@@ -685,6 +697,12 @@ HTML_TEMPLATE = '''
                 const data = await response.json();
                 currentDestination = data;
                 console.log('Destination:', data);
+
+                // Update UI with destination name
+                const destElement = document.getElementById('destinationName');
+                if (destElement && data.name) {
+                    destElement.textContent = data.name;
+                }
             } catch (error) {
                 console.error('Error loading destination:', error);
             }
