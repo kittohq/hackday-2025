@@ -1,5 +1,25 @@
 # AWS Strands Agent Framework Documentation
 
+## 📁 Key Files Overview
+
+| File | Purpose | Key Functions |
+|------|---------|---------------|
+| `simple_strands/app_voice.py` | Main Flask server with voice interface | Lines 862-887: Voice endpoint |
+| `simple_strands/waymo_rider_agent_v2.py` | Strands agent implementation | Lines 286-330: Agent creation |
+| `simple_strands/google_places_agent.py` | Google Places integration | Lines 205-225: Places tools |
+| `simple_strands/DEVELOPER_GUIDE.md` | Technical implementation guide | Architecture details |
+
+### Import Locations
+
+| What | Where | Line |
+|------|-------|------|
+| Strands Agent | `waymo_rider_agent_v2.py` | Line 9: `from strands import Agent, tool` |
+| OpenAI Model | `waymo_rider_agent_v2.py` | Line 10: `from strands.models.openai import OpenAIModel` |
+| Flask Setup | `app_voice.py` | Lines 11-13: Flask, CORS imports |
+| Google API Key | `waymo_rider_agent_v2.py` | Line 33: `os.environ.get("GOOGLE_API_KEY")` |
+| Web Speech API | `app_voice.py` | Lines 452-505: JavaScript implementation |
+| TTS Implementation | `app_voice.py` | Lines 410-449: speak() function |
+
 ## 🎯 What is Strands?
 
 AWS Strands is an AI agent orchestration framework that enables building intelligent, tool-enabled agents. It acts as the **conductor** that coordinates between:
@@ -92,22 +112,32 @@ POST /api/voice
 ```
 
 ### Step 2: Agent Creation & Intent Mapping
+
+📍 **File:** `simple_strands/app_voice.py:879-887`
 ```python
 # Per-request agent creation (app_voice.py)
 intent_mapper = create_intent_mapping_agent()  # Fresh instance
+```
 
+📍 **File:** `simple_strands/waymo_rider_agent_v2.py:286-330`
+```python
 # Agent configuration (waymo_rider_agent_v2.py)
-model = OpenAIModel(
-    model_id="gpt-3.5-turbo",
-    temperature=0.3,  # Low for consistency
-    max_tokens=100
-)
+def create_intent_mapping_agent():
+    """Create a specialized agent for mapping user intent to place categories"""
 
-agent = Agent(
-    name="Place Intent Mapper",
-    model=model,
-    system_prompt="""Map user requests to Google Places categories..."""
-)
+    model = OpenAIModel(
+        model_id="gpt-3.5-turbo",
+        temperature=0.3,  # Low for consistency
+        max_tokens=100
+    )
+
+    agent = Agent(
+        name="Place Intent Mapper",
+        model=model,
+        system_prompt="""Map user requests to Google Places categories..."""
+    )
+
+    return agent
 
 # Execute intent classification
 result = intent_mapper("What category: 'I need coffee'?")
@@ -115,16 +145,18 @@ result = intent_mapper("What category: 'I need coffee'?")
 ```
 
 ### Step 3: Tool Execution via Strands
+
+📍 **File:** `simple_strands/waymo_rider_agent_v2.py:122-209`
 ```python
 # The @tool decorator makes functions callable by agents
 @tool
 def search_places_with_ai(user_request, destination, radius=1500):
     """Search Google Places near destination"""
 
-    # 1. Get place type from intent
+    # 1. Get place type from intent (line 144)
     place_type = map_to_google_place_type(user_request)
 
-    # 2. Call Google Places API
+    # 2. Call Google Places API (lines 147-167)
     response = requests.post(
         "https://places.googleapis.com/v1/places:searchNearby",
         headers={"X-Goog-Api-Key": GOOGLE_API_KEY},
@@ -139,21 +171,23 @@ def search_places_with_ai(user_request, destination, radius=1500):
         }
     )
 
-    # 3. Process and sort results
+    # 3. Process and sort results (lines 176-201)
     places = parse_places(response.json())
     return sorted(places, key=lambda x: x['distance'])
 ```
 
 ### Step 4: Response Generation
+
+📍 **File:** `simple_strands/app_voice.py:725-802`
 ```
 Places Found: [Starbucks, Peet's, Blue Bottle]
      ↓
-Natural Language Generation
+Natural Language Generation (generate_natural_speech() function)
      ↓
 "I found 3 coffee shops near Mission District.
  The closest is Starbucks, just 5 minutes away."
      ↓
-Web Speech Synthesis (TTS)
+Web Speech Synthesis (TTS) - Browser JavaScript lines 410-449
      ↓
 Audio Output to User
 ```
@@ -161,6 +195,8 @@ Audio Output to User
 ## 🎭 Agent Orchestration Patterns
 
 ### 1. **Single-Purpose Agent Pattern** (Current Implementation)
+
+📍 **Implementation:** `simple_strands/app_voice.py:879-887`
 ```
 Request → Create Agent → Execute → Destroy Agent → Response
 
@@ -172,6 +208,8 @@ Benefits:
 ```
 
 ### 2. **Tool Composition Pattern**
+
+📍 **Example:** `simple_strands/google_places_agent.py:205-225`
 ```python
 # Strands allows agents to chain tools
 agent = Agent(
@@ -188,6 +226,8 @@ result = agent("Find coffee shops")
 ```
 
 ### 3. **Fallback Pattern**
+
+📍 **Implementation:** `simple_strands/waymo_rider_agent_v2.py:330-380`
 ```python
 def intelligent_place_search(query):
     try:
@@ -195,7 +235,7 @@ def intelligent_place_search(query):
         intent_agent = create_intent_mapping_agent()
         category = intent_agent(query)
     except Exception:
-        # Fallback: Keyword matching
+        # Fallback: Keyword matching (lines 235-283)
         category = match_by_keywords(query)
 
     return search_places(category)
@@ -260,6 +300,13 @@ Generated: "Great news! I found 5 coffee shops nearby.
 ## 🔧 Key Strands Features Used
 
 ### 1. **Tool Decoration**
+
+📍 **Files with @tool decorators:**
+- `waymo_rider_agent_v2.py:97-112` - map_to_google_place_type
+- `waymo_rider_agent_v2.py:114-119` - get_waymo_destination
+- `waymo_rider_agent_v2.py:122-209` - search_places_with_ai
+- `google_places_agent.py:43-205` - Multiple place search tools
+
 ```python
 @tool  # This decorator makes the function callable by agents
 def search_places(query: str, location: dict) -> list:
@@ -268,6 +315,11 @@ def search_places(query: str, location: dict) -> list:
 ```
 
 ### 2. **Model Abstraction**
+
+📍 **Import locations:**
+- `waymo_rider_agent_v2.py:10` - OpenAIModel import
+- `google_places_agent.py:7` - Alternative model imports
+
 ```python
 # Strands supports multiple models
 from strands.models.openai import OpenAIModel
@@ -279,18 +331,22 @@ model = OpenAIModel(model_id="gpt-4")  # or gpt-3.5-turbo
 ```
 
 ### 3. **Agent Lifecycle Management**
+
+📍 **Implementation:** `app_voice.py:879-887`
 ```python
-# Creation
+# Creation (line 880)
 agent = Agent(name="Intent Mapper", model=model, tools=[])
 
-# Execution
+# Execution (line 883)
 result = agent(user_input)
 
-# Cleanup (automatic with proper scoping)
+# Cleanup (line 887)
 del agent  # Frees resources
 ```
 
 ### 4. **System Prompts**
+
+📍 **Location:** `waymo_rider_agent_v2.py:301-320`
 ```python
 system_prompt = """
 You are an expert at understanding place requests.
