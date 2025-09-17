@@ -111,38 +111,64 @@ Transcript: "I need coffee near my destination"
 POST /api/voice
 ```
 
-### Step 2: Agent Creation & Intent Mapping
+### Step 2: Agent Creation & Intent Mapping (One-Shot Classification)
+
+**⚠️ Important Note:** The function `extract_place_intent` (lines 79-95) is **NOT USED** - it's placeholder code.
+
+**The ACTUAL implementation uses OpenAI for one-shot classification:**
 
 📍 **File:** `simple_strands/app_voice.py:879-887`
 ```python
 # Per-request agent creation (app_voice.py)
-intent_mapper = create_intent_mapping_agent()  # Fresh instance
+intent_mapper = create_intent_mapping_agent()  # Fresh OpenAI instance
+
+# One-shot classification - single API call
+result = intent_mapper(f"What Google Places category best matches: '{user_text}'?")
+place_type = str(result).strip()  # Returns: "coffee_shop"
 ```
 
 📍 **File:** `simple_strands/waymo_rider_agent_v2.py:286-330`
 ```python
-# Agent configuration (waymo_rider_agent_v2.py)
 def create_intent_mapping_agent():
-    """Create a specialized agent for mapping user intent to place categories"""
+    """Create OpenAI-powered agent for one-shot place category classification"""
 
     model = OpenAIModel(
         model_id="gpt-3.5-turbo",
-        temperature=0.3,  # Low for consistency
+        temperature=0.3,  # Low temperature = consistent classification
         max_tokens=100
     )
 
     agent = Agent(
         name="Place Intent Mapper",
         model=model,
-        system_prompt="""Map user requests to Google Places categories..."""
+        tools=[],  # No tools - pure LLM classification
+        system_prompt=f"""You are an expert at understanding what type of place a user is looking for.
+
+Your ONLY job is to map user requests to the most appropriate Google Places API category.
+
+Available Google Places categories:
+{json.dumps(GOOGLE_PLACES_TYPES, indent=2)}
+
+Instructions:
+1. Analyze the user's request carefully
+2. Return ONLY the category key (e.g., "coffee_shop", "restaurant")
+
+Examples:
+- "I need caffeine" → "coffee_shop"
+- "Where can I grab breakfast?" → "breakfast_restaurant"
+- "Looking for somewhere to eat" → "restaurant"
+
+Remember: Return ONLY the category key, nothing else."""
     )
 
     return agent
-
-# Execute intent classification
-result = intent_mapper("What category: 'I need coffee'?")
-# Returns: "coffee_shop"
 ```
+
+**How One-Shot Classification Works:**
+1. User says: "I need coffee"
+2. System sends to GPT-3.5: "What Google Places category best matches: 'I need coffee'?"
+3. GPT-3.5 (with system prompt containing all categories) returns: "coffee_shop"
+4. Single API call = One-shot classification ✅
 
 ### Step 3: Tool Execution via Strands
 
