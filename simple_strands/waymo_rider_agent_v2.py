@@ -142,6 +142,9 @@ def search_places_with_ai(
     # AI agent will determine the place type
     # For now, we'll use the intent mapping agent
     place_type = map_to_google_place_type(user_request)
+    print(f"DEBUG: Searching for '{user_request}' -> detected type: '{place_type}'")
+    print(f"DEBUG: Destination: {destination}")
+    print(f"DEBUG: Google API Key present: {bool(GOOGLE_API_KEY)}")
 
     # Call Google Places API
     url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -168,9 +171,11 @@ def search_places_with_ai(
 
     try:
         response = requests.post(url, headers=headers, json=body)
+        print(f"DEBUG: API Response status: {response.status_code}")
 
         if response.status_code == 200:
             data = response.json()
+            print(f"DEBUG: Found {len(data.get('places', []))} places")
             places = []
 
             for place in data.get('places', []):
@@ -201,6 +206,7 @@ def search_places_with_ai(
             return places
         else:
             print(f"Google Places API error: {response.status_code}")
+            print(f"DEBUG: Response text: {response.text}")
             return []
 
     except Exception as e:

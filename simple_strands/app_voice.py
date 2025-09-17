@@ -438,6 +438,20 @@ HTML_TEMPLATE = '''
             utterance.onend = () => {
                 updateStatus('ready', '🎤', 'Ready to listen');
                 document.querySelector('.voice-status').classList.remove('speaking');
+
+                // Clear the isRecording flag to ensure clean state
+                isRecording = false;
+
+                // Optional: Auto-restart for continuous conversation
+                // Uncomment if you want hands-free continuous mode
+                /*
+                if (window.lastInputWasVoice) {
+                    console.log('Auto-restarting voice recognition');
+                    setTimeout(() => {
+                        startRecording();
+                    }, 500);
+                }
+                */
             };
 
             utterance.onerror = (event) => {
@@ -519,6 +533,19 @@ HTML_TEMPLATE = '''
                 return;
             }
 
+            // Stop any current synthesis first
+            if (synth.speaking) {
+                console.log('Stopping TTS to start recording');
+                synth.cancel();
+            }
+
+            // Stop any existing recognition
+            if (recognition && isRecording) {
+                console.log('Stopping existing recognition before starting new');
+                recognition.stop();
+                isRecording = false;
+            }
+
             // Create fresh recognition instance for each recording
             recognition = createRecognition();
             if (!recognition) {
@@ -527,6 +554,7 @@ HTML_TEMPLATE = '''
             }
 
             try {
+                console.log('Starting speech recognition...');
                 recognition.start();
 
                 // Animate visualizer bars randomly
@@ -536,7 +564,15 @@ HTML_TEMPLATE = '''
 
             } catch (error) {
                 console.error('Error starting recognition:', error);
-                alert('Error accessing speech recognition.');
+                if (error.message && error.message.includes('already started')) {
+                    // Recognition already started, stop it and try again
+                    recognition.stop();
+                    setTimeout(() => {
+                        startRecording();
+                    }, 100);
+                } else {
+                    alert('Error accessing speech recognition: ' + error.message);
+                }
             }
         }
 
@@ -578,6 +614,7 @@ HTML_TEMPLATE = '''
         // Send transcript to server
         async function sendTranscriptToServer(transcript) {
             console.log('Sending transcript to server:', transcript);
+            window.lastInputWasVoice = true;  // Mark that this was voice input
             addMessage(transcript, 'user');
             updateStatus('processing', '⏳', 'Searching...');
 
@@ -622,6 +659,7 @@ HTML_TEMPLATE = '''
 
             if (!text) return;
 
+            window.lastInputWasVoice = false;  // Mark that this was text input
             input.value = '';
             sendVoiceQuery(text, false);  // false = don't use TTS for typed input
         }
