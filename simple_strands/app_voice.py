@@ -27,11 +27,11 @@ load_env_file()
 app = Flask(__name__)
 CORS(app)
 
-# Initialize OpenAI client for Whisper
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# Don't create global OpenAI client - create per request
+# client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Create the intent mapper once
-intent_mapper = create_intent_mapping_agent()
+# Don't create a global agent - will create per request
+# intent_mapper = create_intent_mapping_agent()
 
 # Store current destination
 current_destination = None
@@ -508,20 +508,29 @@ HTML_TEMPLATE = '''
                 stopRecording();
                 // Reset recognition for next use
                 isRecording = false;
+                recognition = null; // Clear the recognition object
             };
 
             return rec;
         }
 
-        // Initialize recognition at startup
-        if (SpeechRecognition) {
-            recognition = createRecognition();
-        }
+        // Don't initialize at startup - create fresh each time
 
         // Start/stop recording
         function toggleRecording() {
+            console.log('Toggle recording - current state:', isRecording);
+
+            // Always stop any ongoing TTS first
+            if (synth.speaking) {
+                console.log('Canceling ongoing TTS');
+                synth.cancel();
+            }
+
             if (!isRecording) {
-                startRecording();
+                // Small delay to ensure clean state
+                setTimeout(() => {
+                    startRecording();
+                }, 100);
             } else {
                 stopRecording();
             }
@@ -577,22 +586,29 @@ HTML_TEMPLATE = '''
         }
 
         function stopRecording() {
-            if (recognition && isRecording) {
-                recognition.stop();
-                isRecording = false;
-
-                // Stop visualization
-                if (animationId) {
-                    cancelAnimationFrame(animationId);
-                    animationId = null;
+            console.log('stopRecording called, isRecording:', isRecording);
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.log('Error stopping recognition:', e);
                 }
-                document.getElementById('visualizer').style.display = 'none';
-
-                // Update UI
-                document.getElementById('voiceButton').classList.remove('recording');
-                document.getElementById('voiceIcon').textContent = '🎤';
-                document.getElementById('voiceText').textContent = 'Tap to speak';
+                recognition = null; // Clear the object
             }
+
+            isRecording = false;
+
+            // Stop visualization
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            document.getElementById('visualizer').style.display = 'none';
+
+            // Update UI
+            document.getElementById('voiceButton').classList.remove('recording');
+            document.getElementById('voiceIcon').textContent = '🎤';
+            document.getElementById('voiceText').textContent = 'Tap to speak';
         }
 
         // Animate visualizer bars
@@ -860,9 +876,15 @@ def process_voice():
         data = request.json
         user_text = data.get('transcript', '')
 
+        # Create a fresh intent mapper for each request
+        intent_mapper = create_intent_mapping_agent()
+
         # Use intent mapper to determine place type
         result = intent_mapper(f"What Google Places category best matches: '{user_text}'? Reply with ONLY the category key.")
         place_type = str(result).strip().replace('"', '').replace("'", "")
+
+        # Clean up the agent
+        del intent_mapper
 
         # Search for places
         places = search_places_with_ai(user_text, current_destination)

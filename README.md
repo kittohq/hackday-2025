@@ -19,6 +19,7 @@ A voice-enabled AI assistant for Waymo riders that provides natural conversation
 - **Yelp Fusion API** (Legacy) - Alternative business data source
 - **Redis** - Caching and preference learning
 - **FastAPI/WebSocket** - Real-time bidirectional communication
+- flask 
 
 ## 🆕 Voice-Enabled Web Interface
 
