@@ -31,6 +31,125 @@ The latest version (`app_voice.py`) provides a full voice conversational interfa
 - **Real-time Transcription**: See what you're saying as you speak
 - **Auto Speech Synthesis**: Responses are automatically spoken aloud
 
+## 🎙️ How Voice (STT/TTS) is Wired
+
+### Architecture Overview
+The voice system uses browser-native Web Speech APIs, requiring **zero API keys** and providing instant, privacy-focused voice interaction:
+
+```
+User Speech → Web Speech API (STT) → Transcript → Backend Processing → Response → Web Speech Synthesis (TTS) → Audio Output
+```
+
+### Speech-to-Text (STT) Implementation
+
+1. **Browser Recognition** (`app_voice.py` lines 452-505):
+   - Uses `webkitSpeechRecognition` (Chrome/Edge) or `SpeechRecognition` (standard)
+   - Creates fresh recognition instance for each recording session
+   - Configured for: English (en-US), interim results, non-continuous mode
+
+2. **Recording Flow** (lines 516-541):
+   ```javascript
+   // Fresh instance per recording to avoid state issues
+   recognition = new SpeechRecognition();
+   recognition.continuous = false;  // Single utterance mode
+   recognition.interimResults = true;  // Show live transcription
+   recognition.start();
+   ```
+
+3. **Real-time Feedback** (lines 472-484):
+   - **Interim results**: Displayed as user speaks (grayed text)
+   - **Final transcript**: Sent to backend when speech ends
+   - **Visual indicators**: Recording dot, waveform visualizer
+
+4. **Backend Processing** (lines 579-592):
+   ```javascript
+   // Send final transcript to Python backend
+   fetch('/api/voice', {
+       method: 'POST',
+       body: JSON.stringify({ transcript: transcript })
+   });
+   ```
+
+### Text-to-Speech (TTS) Implementation
+
+1. **Speech Synthesis Setup** (lines 396-408):
+   ```javascript
+   const synth = window.speechSynthesis;
+   const voices = synth.getVoices();
+   // Prefer high-quality voices (Google, Microsoft)
+   ```
+
+2. **Voice Selection** (lines 417-426):
+   - Prioritizes Google/Microsoft voices for quality
+   - Falls back to system default if unavailable
+   - Configurable rate (1.1x), pitch, and volume
+
+3. **Speaking Flow** (lines 410-449):
+   ```javascript
+   function speak(text) {
+       synth.cancel();  // Stop any current speech
+       const utterance = new SpeechSynthesisUtterance(text);
+       utterance.voice = preferredVoice;
+       utterance.rate = 1.1;  // Slightly faster for natural flow
+       synth.speak(utterance);
+   }
+   ```
+
+4. **Auto-Speaking Responses** (lines 600-605):
+   - Backend responses automatically trigger TTS
+   - Visual feedback during speech (speaker icon)
+   - Graceful handling of TTS failures
+
+### Backend Integration
+
+1. **Voice Agent** (`waymo_rider_agent_v2.py`):
+   ```python
+   @app.post("/api/voice")
+   async def process_voice(request: VoiceRequest):
+       # 1. Receive transcript from STT
+       # 2. Process with Strands/OpenAI agent
+       # 3. Query Google Places API
+       # 4. Format natural language response
+       # 5. Return for TTS playback
+   ```
+
+2. **Natural Speech Generation** (lines 758-795):
+   - Context-aware responses based on result count
+   - Varied phrasing to avoid repetition
+   - Includes distance, ratings, and status in speech
+
+### Key Implementation Details
+
+1. **No API Keys Required**:
+   - Web Speech APIs are browser-native
+   - Free, unlimited usage
+   - Works offline after initial page load
+
+2. **Browser Compatibility**:
+   - **Best**: Chrome, Edge (full support)
+   - **Partial**: Safari (TTS only)
+   - **Fallback**: Text input for unsupported browsers
+
+3. **Error Handling**:
+   - Automatic recognition restart on errors
+   - Fallback to text input if speech fails
+   - Clear error messages for permissions
+
+4. **Performance Optimizations**:
+   - Fresh recognition instance per use (avoids memory leaks)
+   - Speech synthesis cancellation before new speech
+   - Debounced UI updates during recognition
+
+### Voice Interaction Flow
+```
+1. User taps microphone → STT starts
+2. Live transcription shown → User sees what's being heard
+3. User stops speaking → Final transcript sent to backend
+4. Backend processes → Returns natural language response
+5. TTS auto-speaks → Response played through speakers
+6. UI updates → Shows both text and indicates speaking
+```
+
 ### Core V2 Features
 - **Natural Language Understanding**: Say "I'm starving" instead of "restaurant"
 - **Context-Aware Mapping**: "Need fuel" → coffee in morning, gas station at night
